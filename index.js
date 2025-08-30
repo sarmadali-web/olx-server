@@ -34,4 +34,5 @@ app.use((req, res, next) => {
 
 app.use(userRoutes) 
 
-export default app;
+app.listen(port)
+// export default app;
