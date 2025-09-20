@@ -5,6 +5,7 @@ import { client } from './dbConfig.js';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import cors from "cors";
 
 dotenv.config();
 client.connect();
@@ -12,6 +13,7 @@ console.log("You successfully connected to MongoDB!");
 
 const app = express()
 const port = process.env.PORT || 3001
+app.use(cors())
 app.use(express.json());
 app.use(cookieParser());
 
