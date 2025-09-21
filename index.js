@@ -13,28 +13,31 @@ console.log("You successfully connected to MongoDB!");
 
 const app = express()
 const port = process.env.PORT || 3001
+
 app.use(cors())
-app.use(express.json());
-app.use(cookieParser());
+app.use(express.json())
+app.use(cookieParser())
 
+// ✅ Public routes (signup / signin)
+app.use(authRoutes)
 
+// ✅ Auth middleware (only for protected routes)
+function verifyToken(req, res, next) {
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1]; // allow cookie OR bearer
+  if (!token) {
+    return res.status(401).json({ status: 0, message: "No token provided" });
+  }
 
-app.use(authRoutes) 
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    req.user = decoded; // store decoded user
+    next();
+  } catch (error) {
+    return res.status(401).json({ status: 0, message: "Invalid Token", error });
+  }
+}
 
-app.use((req, res, next) => {
-  try{
-    let decoded = jwt.verify(req.cookies.token, process.env.SECRET_KEY);
-    next()
-  }catch(error){
-    return res.send({
-      status : 0,
-      error : error,
-      message : "Invalid Token"
-    })
-  }  
-})
+// ✅ Protected routes
+app.use("/users", verifyToken, userRoutes)
 
-app.use(userRoutes) 
-
-app.listen(port)
-// export default app;
+app.listen(port, () => console.log(`Server running on port ${port}`))
