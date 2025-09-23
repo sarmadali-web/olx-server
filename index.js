@@ -6,24 +6,23 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import serverless from "serverless-http";
 
 dotenv.config();
 
-// ✅ Connect to MongoDB
+// ✅ Connect MongoDB
 client.connect()
   .then(() => console.log("✅ Connected to MongoDB!"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 
 const app = express();
-const port = process.env.PORT || 3001;
 
-// ✅ Allowed origins (add your frontend domains here)
+// ✅ Allowed origins
 const allowedOrigins = [
-  "http://localhost:5173",                // Local Vite dev
-  "https://buy-it-frontend.vercel.app",   // Frontend production
+  "http://localhost:5173",
+  "https://buy-it-frontend.vercel.app",
 ];
 
-// ✅ CORS setup
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -33,17 +32,12 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true, // allow cookies across domains
+    credentials: true,
   })
 );
 
 app.use(express.json());
 app.use(cookieParser());
-
-// ✅ Default route (for browser check)
-app.get("/", (req, res) => {
-  res.send("✅ Backend is running on Vercel!");
-});
 
 // ✅ Public routes
 app.use(authRoutes);
@@ -54,7 +48,6 @@ function verifyToken(req, res, next) {
   if (!token) {
     return res.status(401).json({ status: 0, message: "No token provided" });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     req.user = decoded;
@@ -67,5 +60,8 @@ function verifyToken(req, res, next) {
 // ✅ Protected routes
 app.use("/users", verifyToken, userRoutes);
 
-// ✅ Server start
-app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+// ❌ Remove app.listen() for Vercel
+// app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+
+// ✅ Export as serverless function
+export const handler = serverless(app);
