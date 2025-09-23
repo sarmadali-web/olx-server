@@ -1,43 +1,66 @@
-import express from 'express'
-import authRoutes from './routes/authRoutes.js'
-import userRoutes from './routes/userRoutes.js'
-import { client } from './dbConfig.js';
-import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
+import express from "express";
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import { client } from "./dbConfig.js";
+import cookieParser from "cookie-parser";
+import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 import cors from "cors";
 
 dotenv.config();
-client.connect();
-console.log("You successfully connected to MongoDB!");
 
-const app = express()
-const port = process.env.PORT || 3001
+// ✅ Connect to MongoDB
+client.connect()
+  .then(() => console.log("✅ Connected to MongoDB!"))
+  .catch(err => console.error("❌ MongoDB connection error:", err));
 
-app.use(cors())
-app.use(express.json())
-app.use(cookieParser())
+const app = express();
+const port = process.env.PORT || 3001;
 
-// ✅ Public routes (signup / signin)
-app.use(authRoutes)
+// ✅ Allowed origins (add your frontend domains here)
+const allowedOrigins = [
+  "http://localhost:5173",                // Local Vite dev
+  "https://buy-it-frontend.vercel.app",   // Frontend production
+];
 
-// ✅ Auth middleware (only for protected routes)
+// ✅ CORS setup
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true, // allow cookies across domains
+  })
+);
+
+app.use(express.json());
+app.use(cookieParser());
+
+// ✅ Public routes
+app.use(authRoutes);
+
+// ✅ Auth middleware
 function verifyToken(req, res, next) {
-  const token = req.cookies.token || req.headers.authorization?.split(" ")[1]; // allow cookie OR bearer
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
   if (!token) {
     return res.status(401).json({ status: 0, message: "No token provided" });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    req.user = decoded; // store decoded user
+    req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json({ status: 0, message: "Invalid Token", error });
+    return res.status(401).json({ status: 0, message: "Invalid Token" });
   }
 }
 
 // ✅ Protected routes
-app.use("/users", verifyToken, userRoutes)
+app.use("/users", verifyToken, userRoutes);
 
-app.listen(port, () => console.log(`Server running on port ${port}`))
+// ✅ Server start
+app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
