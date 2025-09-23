@@ -40,6 +40,11 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// ✅ Default route (for browser check)
+app.get("/", (req, res) => {
+  res.send("✅ Backend is running on Vercel!");
+});
+
 // ✅ Public routes
 app.use(authRoutes);
 
