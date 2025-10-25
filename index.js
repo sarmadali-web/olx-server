@@ -20,7 +20,7 @@ const app = express();
 // ✅ Allowed origins
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://buy-it-frontend.vercel.app",
+  "https://buy-it-nu.vercel.app",
 ];
 
 app.use(
