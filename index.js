@@ -60,8 +60,5 @@ function verifyToken(req, res, next) {
 // ✅ Protected routes
 app.use("/users", verifyToken, userRoutes);
 
-// ❌ Remove app.listen() for Vercel
-// app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
-
-// ✅ Export as serverless function
-export const handler = serverless(app);
+// ✅ Export as default serverless function for Vercel
+export default serverless(app);
