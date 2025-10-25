@@ -11,12 +11,13 @@ import serverless from "serverless-http";
 dotenv.config();
 
 const app = express();
+
+// ✅ Middlewares
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Connect to MongoDB only once
+// ✅ Connect to MongoDB once
 let isConnected = false;
-
 async function connectDB() {
   if (!isConnected) {
     try {
@@ -24,12 +25,10 @@ async function connectDB() {
       isConnected = true;
       console.log("✅ MongoDB connected");
     } catch (err) {
-      console.error("❌ MongoDB connection error:", err);
+      console.error("❌ MongoDB connection error:", err.message);
     }
   }
 }
-
-// ✅ Middleware to ensure DB connection
 app.use(async (req, res, next) => {
   await connectDB();
   next();
@@ -38,25 +37,20 @@ app.use(async (req, res, next) => {
 // ✅ Allowed origins
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://buy-it-nu.vercel.app",
+  "https://buy-it-nu.vercel.app", // your frontend
 ];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
 
 // ✅ Routes
-app.use(authRoutes);
+app.use("/api/auth", authRoutes);
 
+// ✅ Middleware for protected routes
 function verifyToken(req, res, next) {
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ status: 0, message: "No token" });
@@ -66,15 +60,17 @@ function verifyToken(req, res, next) {
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ status: 0, message: "Invalid Token" });
+    res.status(401).json({ status: 0, message: "Invalid or expired token" });
   }
 }
 
-app.use("/users", verifyToken, userRoutes);
+// ✅ Protected user routes
+app.use("/api/users", verifyToken, userRoutes);
 
+// ✅ Test route
 app.get("/", (req, res) => {
   res.json({ message: "Server running successfully ✅" });
 });
 
-// ✅ Default export for Vercel
+// ✅ Export for Vercel
 export default serverless(app);

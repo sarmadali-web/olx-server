@@ -1,90 +1,110 @@
-import express from 'express'
-import { client } from '../dbConfig.js';
-import { ObjectId } from 'mongodb';
-const router = express.Router()
-const myDB = client.db("express");
-const Products = myDB.collection("products");
+import express from "express";
+import { client } from "../dbConfig.js";
+import { ObjectId } from "mongodb";
 
-router.post('/user/product', async (req, res) => {
-  const product = {
-    title: req.body.title,
-    description: req.body.description,
-    price: req.body.price,
-    createdAt: Date.now()
+const router = express.Router();
+const db = client.db("express");
+const Products = db.collection("products");
+
+// ---------------- ADD PRODUCT ----------------
+router.post("/user/product", async (req, res) => {
+  try {
+    const { title, description, price } = req.body;
+
+    if (!title || !description || !price) {
+      return res.status(400).json({ status: 0, message: "All fields are required" });
+    }
+
+    const product = {
+      title,
+      description,
+      price,
+      createdAt: new Date(),
+    };
+
+    const response = await Products.insertOne(product);
+
+    if (response.acknowledged) {
+      return res.status(201).json({ status: 1, message: "Product added successfully" });
+    } else {
+      return res.status(500).json({ status: 0, message: "Something went wrong" });
+    }
+  } catch (error) {
+    console.error("Add Product Error:", error);
+    res.status(500).json({ status: 0, message: "Internal Server Error" });
   }
+});
 
-  const response = await Products.insertOne(product)
-  if (response) {
-    return res.send("product added successfully")
+// ---------------- GET ALL PRODUCTS ----------------
+router.get("/user/product", async (req, res) => {
+  try {
+    const allProducts = await Products.find().toArray();
+
+    if (allProducts.length > 0) {
+      return res.status(200).json({ status: 1, data: allProducts });
+    } else {
+      return res.status(404).json({ status: 0, message: "No products found" });
+    }
+  } catch (error) {
+    console.error("Get Products Error:", error);
+    res.status(500).json({ status: 0, message: "Internal Server Error" });
   }
-  else {
-    return res.send("something went wrong")
+});
+
+// ---------------- DELETE PRODUCT ----------------
+router.delete("/user/product/:id", async (req, res) => {
+  try {
+    const productId = new ObjectId(req.params.id);
+    const result = await Products.deleteOne({ _id: productId });
+
+    if (result.deletedCount > 0) {
+      return res.status(200).json({ status: 1, message: "Product deleted successfully" });
+    } else {
+      return res.status(404).json({ status: 0, message: "Product not found" });
+    }
+  } catch (error) {
+    console.error("Delete Product Error:", error);
+    res.status(500).json({ status: 0, message: "Internal Server Error" });
   }
-})
+});
 
-router.get('/user/product', async (req, res) => {
-  const allProducts = Products.find()
-  const response = await allProducts.toArray()
-  console.log(response)
-  if (response.length > 0) {
-    return res.send(response)
+// ---------------- UPDATE PRODUCT ----------------
+router.put("/user/product/:id", async (req, res) => {
+  try {
+    const productId = new ObjectId(req.params.id);
+    const { title, description, price } = req.body;
 
-  } else {
+    const result = await Products.updateOne(
+      { _id: productId },
+      { $set: { title, description, price } }
+    );
 
-    return res.send('No products found')
+    if (result.modifiedCount > 0) {
+      return res.status(200).json({ status: 1, message: "Product updated successfully" });
+    } else {
+      return res.status(404).json({ status: 0, message: "Product not found or no changes" });
+    }
+  } catch (error) {
+    console.error("Update Product Error:", error);
+    res.status(500).json({ status: 0, message: "Internal Server Error" });
   }
-})
+});
 
-// router.delete('/user/product/:id', async (req, res) => {
-//   const productId = new ObjectId(req.params.id)
+// ---------------- GET PRODUCT BY ID ----------------
+router.get("/user/product/:id", async (req, res) => {
+  try {
+    const productId = new ObjectId(req.params.id);
+    const product = await Products.findOne({ _id: productId });
 
-//   const deleteProduct = await Products.deleteOne({ _id: productId })
-//   if (deleteProduct) {
-//     return res.send("product deleted")
-//   } else {
-//     return res.send("something went wrong")
-//   }
-// })
-
-// router.put('/user/product/:id', async (req, res) => {
-//   // const query = {id : new ObjectId(req.params.id)}
-//   // const update = { title: req.body.title, description: req.body.description }
-//   const result = await Products.updateOne(
-//     { _id: new ObjectId(req.params.id) },
-//     { $set: {title: req.body.title, description: req.body.description} },
-//     {}
-//   )
-
-//   if(result){
-//     return res.send("product updated successfully")
-//   }else{
-//     return res.send("something went wrong")
-//   }
-// })
-
-// router.get('/user/product/:id', async (req, res) => {
-//   const product = await Products.findOne({_id : new ObjectId(req.params.id)})
-//   if(product){
-//     return res.send(product)
-//   }else{
-//     return res.send('product not found')
-//   }
-// })
-
-// router.post('/user/cart/:productId/:userId', (request, res) => {
-//   if (cart) {
-//     res.send('removed cart')
-//   } else {
-//     res.send('added to cart')
-//   }
-// })
-
-// router.get('/user/cart/:userId', (request, res) => {
-//   res.send('this is user cart')
-// })
-
-// router.post('/user/checkout/:cartId', (request, res) => {
-//   res.send('order placed succesfully')
-// })
+    if (product) {
+      return res.status(200).json({ status: 1, data: product });
+    } else {
+      return res.status(404).json({ status: 0, message: "Product not found" });
+    }
+  } catch (error) {
+    console.error("Get Product Error:", error);
+    res.status(500).json({ status: 0, message: "Internal Server Error" });
+  }
+});
 
 export default router;
