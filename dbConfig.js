@@ -1,10 +1,16 @@
-import {MongoClient ,ServerApiVersion} from "mongodb";
-const uri = "mongodb://localhost:27017/"
+import { MongoClient, ServerApiVersion } from "mongodb";
+import dotenv from "dotenv";
+dotenv.config();
 
-export const client = new MongoClient(uri , {
-    serverapi: {
-        version : ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
-})
+const uri = process.env.MONGODB_URI;
+
+export const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+await client.connect();
+console.log("Connected to MongoDB Atlas!");
