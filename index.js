@@ -10,12 +10,30 @@ import serverless from "serverless-http";
 
 dotenv.config();
 
-// ✅ Connect MongoDB
-client.connect()
-  .then(() => console.log("✅ Connected to MongoDB!"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
-
 const app = express();
+app.use(express.json());
+app.use(cookieParser());
+
+// ✅ Connect to MongoDB only once
+let isConnected = false;
+
+async function connectDB() {
+  if (!isConnected) {
+    try {
+      await client.connect();
+      isConnected = true;
+      console.log("✅ MongoDB connected");
+    } catch (err) {
+      console.error("❌ MongoDB connection error:", err);
+    }
+  }
+}
+
+// ✅ Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // ✅ Allowed origins
 const allowedOrigins = [
@@ -36,29 +54,27 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(cookieParser());
-
-// ✅ Public routes
+// ✅ Routes
 app.use(authRoutes);
 
-// ✅ Auth middleware
 function verifyToken(req, res, next) {
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ status: 0, message: "No token provided" });
-  }
+  if (!token) return res.status(401).json({ status: 0, message: "No token" });
+
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json({ status: 0, message: "Invalid Token" });
+    res.status(401).json({ status: 0, message: "Invalid Token" });
   }
 }
 
-// ✅ Protected routes
 app.use("/users", verifyToken, userRoutes);
 
-// ✅ Export as default serverless function for Vercel
+app.get("/", (req, res) => {
+  res.json({ message: "Server running successfully ✅" });
+});
+
+// ✅ Default export for Vercel
 export default serverless(app);
