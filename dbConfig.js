@@ -2,7 +2,11 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import dotenv from "dotenv";
 dotenv.config();
 
-const uri = process.env.MONGO_URI;
+const uri = process.env.MONGODB_URI; // ✅ match .env key name exactly
+
+if (!uri) {
+  throw new Error("❌ MONGODB_URI not found in environment variables.");
+}
 
 export const client = new MongoClient(uri, {
   serverApi: {
@@ -22,6 +26,7 @@ export async function connectDB() {
       console.log("✅ Connected to MongoDB Atlas!");
     } catch (err) {
       console.error("❌ MongoDB connection failed:", err.message);
+      throw err;
     }
   }
 }

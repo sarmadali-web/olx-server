@@ -1,7 +1,7 @@
 import express from "express";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import { connectDB, client } from "./dbConfig.js";
+import { connectDB } from "./dbConfig.js";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
@@ -12,32 +12,14 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Middlewares
+// ✅ Middleware
 app.use(express.json());
 app.use(cookieParser());
-
-// ✅ Connect to MongoDB once
-let isConnected = false;
-async function connectDB() {
-  if (!isConnected) {
-    try {
-      await client.connect();
-      isConnected = true;
-      console.log("✅ MongoDB connected");
-    } catch (err) {
-      console.error("❌ MongoDB connection error:", err.message);
-    }
-  }
-}
-app.use(async (req, res, next) => {
-  await connectDB();
-  next();
-});
 
 // ✅ Allowed origins
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://buy-it-nu.vercel.app", // your frontend
+  "https://buy-it-nu.vercel.app", // your frontend URL
 ];
 
 app.use(
@@ -47,10 +29,13 @@ app.use(
   })
 );
 
+// ✅ Connect to MongoDB once (before routes)
+await connectDB();
+
 // ✅ Routes
 app.use("/api/auth", authRoutes);
 
-// ✅ Middleware for protected routes
+// ✅ Token verification middleware
 function verifyToken(req, res, next) {
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ status: 0, message: "No token" });
@@ -64,10 +49,10 @@ function verifyToken(req, res, next) {
   }
 }
 
-// ✅ Protected user routes
+// ✅ Protected routes
 app.use("/api/users", verifyToken, userRoutes);
 
-// ✅ Test route
+// ✅ Root test route
 app.get("/", (req, res) => {
   res.json({ message: "Server running successfully ✅" });
 });
